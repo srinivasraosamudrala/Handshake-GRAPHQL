@@ -14,6 +14,9 @@ import TextField from '@material-ui/core/TextField';
 import IconButton from '@material-ui/core/IconButton';
 import emptyPic from '../../../images/empty-profile-picture.png';
 // import {KeyboardDatePicker} from '@material-ui/pickers';
+import { withApollo } from 'react-apollo';
+import { student } from '../../../queries/queries';
+import { updateStudentBasic } from '../../../mutations/mutations'
 
 class Profile1 extends Component {
     constructor(props) {
@@ -61,45 +64,56 @@ class Profile1 extends Component {
         })
     }
 
-    updateProfile = (e) => {
-        const data = {
-            studentId: localStorage.getItem('studentId'),
-            update: {
+    updateProfile = async (e) => {
+        // const data = {
+        //     studentId: sessionStorage.getItem('studentId'),
+        //     update: {
+        //         email: this.state.email_preferred,
+        //         mobile: this.state.mobile_preferred,
+        //         dob: this.state.dob_preferred,
+        //         city: this.state.city_preferred,
+        //         state: this.state.state_preferred,
+        //         country: this.state.country_preferred
+        //     }
+        // }
+
+        // console.log(data)
+
+        let res = await this.props.client.mutate({
+            mutation: updateStudentBasic,
+            variables: {
+                id: sessionStorage.getItem('studentId'),
                 email: this.state.email_preferred,
                 mobile: this.state.mobile_preferred,
                 dob: this.state.dob_preferred,
                 city: this.state.city_preferred,
                 state: this.state.state_preferred,
                 country: this.state.country_preferred
+            },
+            refetchQueries: [{
+                query: student,
+                variables: { studentId: sessionStorage.getItem("studentId") },
+                fetchPolicy: 'no-cache'
+            }]
+        })
+
+        console.log(res)
+
+        let response = res.data.updateStudent
+
+        if (response.status === "200") {
+            if (response.status === "200") {
+                this.setState(currentState => ({
+                    success: true,
+                    updateprofile: !currentState.updateprofile
+                }));
+            }
+            else {
+                this.setState(currentState => ({
+                    updateprofile: !currentState.updateprofile
+                }));
             }
         }
-
-        console.log(data)
-
-        this.props.updatePersonalInfo(data)
-        // axios.defaults.withCredentials = true;
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.post(environment.baseUrl+'/student/profile', data)
-        //     .then(response => {
-        //         console.log(response.data)
-        //         if (response.data) {
-        //             let profiledata = {
-        //                 email   : response.data.email,
-        //                 mobile  : response.data.mobile,
-        //                 dob     : response.data.dob,
-        //                 city    : response.data.city,
-        //                 state   : response.data.state,
-        //                 country : response.data.country}
-        //             this.setState({
-        //                 profiledata : profiledata
-        //             })
-        //         } else {
-        //             console.log(response.data.error)
-        //         }
-        //         this.setState(currentState => ({
-        //             updateprofile: !currentState.updateprofile
-        //         }))
-        //     })
     }
 
     updateInfo = (e) => {
@@ -198,4 +212,5 @@ class Profile1 extends Component {
         )
     }
 }
-export default Profile1;
+// export default Profile1;
+export default withApollo(Profile1)

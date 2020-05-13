@@ -1,12 +1,9 @@
 import React, { Component } from 'react';
 // import StudentNav from './studentNavbar';
 import { Card, CardContent, TablePagination, Avatar } from '@material-ui/core/';
-import axios from 'axios';
 import { Link, Redirect } from 'react-router-dom';
-import viewStudent from './viewstudent.js';
-import { environment } from '../../Utils/constants'
-import { connect } from "react-redux";
-import { getStudentList } from "../../redux/actions/index";
+import { withApollo } from 'react-apollo';
+import { allStudents } from '../../queries/queries';
 
 //create the Student Home Component
 class companyStudentSearch extends Component {
@@ -14,7 +11,7 @@ class companyStudentSearch extends Component {
         super(props);
         this.state = {
             companyId: "",
-            studentsList: null,
+            studentsList: [],
             namesearch: "",
             majorsearch: "",
             studentprofilepic: [],
@@ -58,17 +55,16 @@ class companyStudentSearch extends Component {
     }
 
     viewstudent = (studentId) => {
-        localStorage.setItem('sstudentId', studentId);
+        sessionStorage.setItem('sstudentId', studentId);
         this.setState({
             showStudent: true
         })
     }
 
     componentDidMount() {
-        this.setState({ companyId: localStorage.getItem('companyId') })
-        this.props.getStudentList()
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.get(environment.baseUrl+'/company/studentsearch/' + localStorage.getItem('companyId'))
+        this.getStudentList()
+        // axios.defaults.headers.common['authorization'] = sessionStorage.getItem('token');
+        // axios.get(environment.baseUrl+'/company/studentsearch/' + sessionStorage.getItem('companyId'))
         //     .then((response) => {
         //         console.log(response.data)
         //         if (response.data){
@@ -79,24 +75,44 @@ class companyStudentSearch extends Component {
         //     })
     }
 
+    getStudentList = async () => {
+        const {data} = await this.props.client.query({
+            query: allStudents,
+            variables: {studentId: ""},
+            fetchPolicy: 'no-cache'
+        })
+        console.log(data)
+
+
+        if (data.allStudents) {
+            this.setState({
+                studentsList: data.allStudents
+            })
+        }else{
+            this.setState({
+                studentsList:[]
+            })
+        }
+    }
+
     render() {
         let students = null;
-        let studentList = this.props.studentsList;
+        let studentList = this.state.studentsList;
         let redirectVar = null;
 
-
+        console.log(studentList)
         if (studentList.length) {
             console.log(studentList)
             if (this.state.namesearch) {
                 console.log(this.state.namesearch)
                 studentList = studentList.filter((student) => {
-                    return (student.first_name.indexOf(this.state.namesearch) > -1 || student.last_name.indexOf(this.state.namesearch) > -1 || (student.skills.indexOf(this.state.namesearch) > -1))
+                    return (student.first_name.indexOf(this.state.namesearch) > -1 || student.last_name.indexOf(this.state.namesearch) > -1 || student.college.indexOf(this.state.namesearch) > -1)
                 })
             }
 
             if (this.state.majorsearch) {
                 studentList = studentList.filter((student) => {
-                    return (student.education[0].major.indexOf(this.state.majorsearch) > -1)
+                    return (student.education?student.education.major.indexOf(this.state.majorsearch) > -1:false)
                 })
             }
             if (this.state.showStudent === true) {
@@ -107,20 +123,22 @@ class companyStudentSearch extends Component {
             students = (
                 <div>
                     {redirectVar}
+                    <div style={{height:'450px'}}>
                     {studentList.slice(this.state.page * this.state.rowsPerPage, this.state.page * this.state.rowsPerPage + this.state.rowsPerPage).map((student, index) => {
-                        // {studentList.map((student, index) => {
-                        return (<Card style={{ marginBottom: '20px' }}>
+                        return (<Card style={{ marginBottom: '20px', height:'120px' }}>
                             <CardContent>
                                 <div class="col-md-2" style={{ padding: '0px' }}><center><Avatar src={student.image} style={{ height: '90px', width: '90px' }} >{student.first_name[0] + student.last_name[0]}</Avatar></center></div>
                                 <div class="col-md-9" style={{ marginBottom: '16px', padding: '0px' }}>
                                     <div style={{ fontSize: '16px', fontWeight: '700' }}><Link onClick={() => { this.viewstudent(student._id) }}>{student.first_name + " " + student.last_name}</Link></div>
                                     {(student.college) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{student.college}</div>) : <div></div>}
-                                    {(student.education.length) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{student.education[0].degree + ", " + student.education[0].major}</div>) : <div></div>}
-                                    {(student.experience.length) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{student.experience[0].title + " at " + student.experience[0].company}</div>) : <div></div>}
-                                    {(student.skills.length) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{"Skills:" + student.skills}</div>) : <div></div>}</div>
+                                    {(student.education) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{student.education[0].degree + ", " + student.education[0].major}</div>) : <div>Education Details not updated</div>}
+                                    {(student.experience) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{student.experience[0].title + " at " + student.experience[0].company}</div>) : <div>Experience Details not updated</div>}
+                                     {/* {(student.skills.length) ? (<div style={{ fontSize: '16px', fontWeight: '500' }}>{"Skills:" + student.skills}</div>) : <div></div>} */}
+                                    </div>
                             </CardContent>
                         </Card>)
                     })}
+                    </div>
                     <div class='row'>
                         <div class='col-md-7'></div>
                         <TablePagination
@@ -140,7 +158,6 @@ class companyStudentSearch extends Component {
 
 
         return (<div>
-            {/* <StudentNav comp="studentsearch" /> */}
             <div style={{ paddingLeft: '5%', paddingRight: '5%', fontFamily: 'Arial' }}>
                 <div class="col-md-3">
                     <Card>
@@ -148,7 +165,7 @@ class companyStudentSearch extends Component {
                             <div>
                                 <div style={{ fontWeight: '550', fontSize: '16px' }}>Filters</div>
                                 <div style={{ fontWeight: '550', fontSize: '13px', padding: '16px' }}>Name</div>
-                                <div style={{ width: "100%", paddingLeft: '16px' }}><input type="text" name="namesearch" id="namesearch" placeholder="Enter a name or a skill" onChange={this.inputChangeHandler} /></div>
+                                <div style={{ width: "100%", paddingLeft: '16px' }}><input type="text" name="namesearch" id="namesearch" placeholder="Enter a name or college" onChange={this.inputChangeHandler} /></div>
                             </div>
                             <div>
                                 <div style={{ fontWeight: '550', fontSize: '13px', padding: '16px' }}>Major</div>
@@ -168,19 +185,4 @@ class companyStudentSearch extends Component {
     }
 }
 
-const mapStateToProps = state => {
-    console.log(state)
-    return {
-        studentsList: state.studentlist
-    };
-};
-
-function mapDispatchToProps(dispatch) {
-    return {
-        getStudentList: payload => dispatch(getStudentList(payload)),
-    };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(companyStudentSearch);
-
-// export default StudentSearch;
+export default withApollo(companyStudentSearch)

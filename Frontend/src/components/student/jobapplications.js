@@ -5,8 +5,9 @@ import { Card, CardContent, TablePagination} from '@material-ui/core/';
 import axios from 'axios';
 import emptyPic from '../../images/empty-profile-picture.png';
 import {environment} from '../../Utils/constants'
-import { connect } from "react-redux";
-import { getStudentApplications } from "../../redux/actions/index";
+import { withApollo,graphql, compose } from 'react-apollo';
+import { listAppliedJobs } from '../../queries/queries';
+
 
 //create the Student Home Component
 class JobApplications extends Component {
@@ -47,24 +48,13 @@ class JobApplications extends Component {
     }
 
     componentDidMount() {
-        this.setState({ studentId: localStorage.getItem('studentId') })
-        this.props.getStudentApplications();
-        axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        axios.get(environment.baseUrl+'/student/jobapplications/' + localStorage.getItem('studentId'))
-            .then((response) => {
-                if (response.data.length>0) {
-                this.setState({
-                    applications: response.data,
-                });
-                console.log(response.data)
-            }
-            })
     }
 
     render(){
         let jobapplications = null;
-        let applications = this.props.applications
-        if (applications.length){
+        console.log(this.props.data)
+        let applications = this.props.data.listAppliedJobs
+        if (applications){
             if (this.state.status){
                 applications=applications.filter((app) => {
                     return this.state.status.indexOf(app.applications[0].status) > -1
@@ -78,13 +68,13 @@ class JobApplications extends Component {
                 return (<Card style={{marginBottom:'20px'}}>
                     <CardContent>
                         <div class="col-md-1">
-                        <img src={app.Company[0].image?app.Company[0].image:this.state.emptyprofilepic} height='70' width='70' style={{ position:'relative',top:'8px',left:'-15px'}} alt='Profile'/>
+                        <img src={app.companydetails[0].image?app.companydetails[0].image:this.state.emptyprofilepic} height='70' width='70' style={{ position:'relative',top:'8px',left:'-15px'}} alt='Profile'/>
                         </div>
                         <div class="col-md-9" style={{marginBottom:'16px'}}>
                         <div style={{fontSize: '16px', fontWeight: '700' }}>{app.title}</div>
-                        <div style={{fontSize: '16px', fontWeight: '500' }}>{app.Company[0].name}</div>
+                        <div style={{fontSize: '16px', fontWeight: '500' }}>{app.companydetails[0].name}</div>
                         <div style={{fontSize: '16px', fontWeight: '500'}}>{"status:" + app.applications[0].status}</div>
-                        <div>Applied on {app.applications[0].applied_date} - Applications close on {app.deadline.slice(0,10)}</div></div>
+                        <div>Applied on {app.applications[0].appliedDate} - Applications close on {app.deadline.slice(0,10)}</div></div>
                     </CardContent>
                 </Card>)
                 })}
@@ -132,19 +122,9 @@ class JobApplications extends Component {
 }
 }
 
-const mapStateToProps = state => {
-    console.log(state)
-    return {
-        applications: state.studentapplications,
-    };
-};
-
-function mapDispatchToProps(dispatch) {
-    return {
-        getStudentApplications : payload => dispatch(getStudentApplications(payload)),
-    };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(JobApplications);
-
-// export default JobApplications;
+export default compose(withApollo,
+    graphql(listAppliedJobs, {
+   options: {
+       variables: {  studentId: sessionStorage.getItem("studentId") }
+   }
+}),)(JobApplications)

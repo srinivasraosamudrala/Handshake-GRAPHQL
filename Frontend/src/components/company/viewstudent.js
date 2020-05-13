@@ -1,17 +1,15 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router';
 import '../../App.css';
-import axios from 'axios';
 import { Card, Chip, CardContent, Typography, Avatar, Dialog, DialogContent } from '@material-ui/core';
-import { environment } from '../../Utils/constants'
 import CakeIcon from '@material-ui/icons/Cake';
 import PhoneOutlinedIcon from '@material-ui/icons/PhoneOutlined';
 import EmailOutlinedIcon from '@material-ui/icons/EmailOutlined';
 import LocationCityIcon from '@material-ui/icons/LocationCity';
 import SchoolRoundedIcon from '@material-ui/icons/SchoolRounded';
 import WorkIcon from '@material-ui/icons/Work';
-import { connect } from "react-redux";
-import { viewStudent, sendMessages } from "../../redux/actions/index";
+import { withApollo } from 'react-apollo';
+import { student } from '../../queries/queries';
 
 
 //Define a Login Component
@@ -19,25 +17,41 @@ class Profile extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            companyId: localStorage.getItem('companyId'),
-            currentstudentId: localStorage.getItem('sstudentId'),
+            profiledata:{},
+            companyId: sessionStorage.getItem('companyId'),
+            currentstudentId: sessionStorage.getItem('sstudentId'),
             messagestudent: false,
             mess: "",
             redirectToMessages: false
         }
-        this.messageStudent = this.messageStudent.bind(this);
         this.inputChangeHandler = this.inputChangeHandler.bind(this);
-        this.sendMessage = this.sendMessage.bind(this);
     }
 
     componentDidMount() {
         this.readstudentdata()
     }
 
-    readstudentdata() {
-        this.props.viewStudent()
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.get(environment.baseUrl + '/student/profile/' + localStorage.getItem('sstudentId'))
+    readstudentdata = async () => {
+        const {data} = await this.props.client.query({
+            query: student,
+            variables: {studentId:sessionStorage.getItem('sstudentId')},
+            fetchPolicy: 'no-cache'
+        })
+        console.log(data)
+
+
+        if (data.student) {
+            this.setState({
+                profiledata: data.student
+            })
+        }else{
+            this.setState({
+                profiledata:{}
+            })
+        }
+        // this.props.viewStudent()
+        // axios.defaults.headers.common['authorization'] = sessionStorage.getItem('token');
+        // axios.get(environment.baseUrl + '/student/profile/' + sessionStorage.getItem('sstudentId'))
         //     .then((response) => {
         //         //update the state with the response data
         //         if (response.data) {
@@ -52,61 +66,11 @@ class Profile extends Component {
         //     });
     }
 
-    messageStudent = () => {
-        this.setState(currentState => ({
-            messagestudent: !currentState.messagestudent
-        }))
-    }
     inputChangeHandler = (e) => {
         const value = e.target.value
         this.setState({
             [e.target.name]: value
         })
-    }
-    sendMessage = () => {
-        // e.preventDefault();
-        let currentdate = new Date()
-        const dtf = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: '2-digit' })
-        const [{ value: mo }, , { value: da }, , { value: ye }] = dtf.formatToParts(currentdate)
-        let datestr = mo + " " + da + " " + ye + " " + currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds()
-        let data = null
-        console.log(this.state.companyId)
-        console.log(this.state.currentstudentId)
-        data = {
-            id1: this.state.companyId,
-            id2: this.state.currentstudentId,
-            update: {
-                id1: {
-                    sender: this.state.companyId,
-                    persona: "companies"
-                },
-                id2: {
-                    receiver: this.state.currentstudentId,
-                    persona: "students"
-                },
-                $push: {
-                    messages: [{
-                        fromId: this.state.companyId,
-                        message: this.state.mess,
-                        dateTime: datestr
-                    }]
-                }
-            }
-        }
-        console.log(data)
-        this.props.sendMessages(data)
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.post(environment.baseUrl + '/message/sendmessage', data)
-        //     .then(response => {
-        //         console.log("in frontend after response");
-        //         console.log(response.data)
-        //         if (response.data) {
-        //             this.setState({ redirectToMessages: true })
-        //         } else if (response.data.error) {
-        //             console.log("response" + response.data.error)
-        //         }
-        //     }
-        //     )
     }
 
     render() {
@@ -114,7 +78,7 @@ class Profile extends Component {
         let skillset = null
         let personalinfo = null
         let redirectVar = null
-        let studentview = this.props.profiledata
+        let studentview = this.state.profiledata
         console.log(studentview)
 
         if(this.props.redirectToMessages){
@@ -168,8 +132,6 @@ class Profile extends Component {
         return (
             <div style={{ width: "95%", backgroundColor: '#F7F7F7', fontFamily: 'Arial' }}>
                 {redirectVar}
-                {console.log(studentview)}
-                {console.log(Object.keys(studentview).length)}
                 {(Object.keys(studentview).length) ?
                     <div class="container" style={{ backgroundColor: '#F7F7F7' }}>
                         {console.log(studentview)}
@@ -188,11 +150,11 @@ class Profile extends Component {
                                             <center>
                                                 <h1 style={{ fontSize: '30px' }}>{studentview.first_name + " " + studentview.last_name}</h1>
                                                 {(studentview.college) ? (<h4 >{studentview.college}</h4>) : <div></div>}
-                                                {(studentview.education[0].degree) ? (<h4 style={{ fontSize: '15px' }}>{studentview.education[0].degree + "," + studentview.education[0].major}</h4>) : (<div></div>)}
-                                                {(studentview.education[0].degree && studentview.education[0].cgpa) ? (<Typography color="textSecondary">
+                                                {(studentview.education) ? (<h4 style={{ fontSize: '15px' }}>{studentview.education[0].degree + "," + studentview.education[0].major}</h4>) : (<div></div>)}
+                                                {(studentview.education) ? (<Typography color="textSecondary">
                                                     <h4 >{studentview.education[0].degree + " • GPA:" + studentview.education[0].cgpa}</h4>
                                                 </Typography>) : <div></div>}
-                                                <button class="btn btn-primary" style={{ backgroundColor: '#1569e0', border: '0px', width: '85%' }} onClick={() => this.messageStudent()}>Message</button>
+                                                {/* <button class="btn btn-primary" style={{ backgroundColor: '#1569e0', border: '0px', width: '85%' }} onClick={() => this.messageStudent()}>Message</button>
                                                 <Dialog
                                                     aria-labelledby="simple-modal-title"
                                                     aria-describedby="simple-modal-description"
@@ -207,15 +169,15 @@ class Profile extends Component {
                                                                 <button onClick={() => { this.sendMessage() }} class="btn btn-primary" style={{ backgroundColor: '#1569E0', border: '0px', borderRadius: '5px', padding:'5px', margin:'5px',width:'55px' }}>Send</button><br /><br />
                                                         </div>
                                                     </DialogContent>
-                                                </Dialog>
+                                                </Dialog> */}
                                             </center>
                                         </div>
                                     </CardContent>
                                 </Card>
                             </div>
-                            <div class="row" style={{ marginBottom: '20px', marginRight: '20px' }}>
+                            {/* <div class="row" style={{ marginBottom: '20px', marginRight: '20px' }}>
                                 {skillset}
-                            </div>
+                            </div> */}
                             <div class="row" style={{ marginBottom: '20px', marginRight: '20px' }}>
                                 {personalinfo}
                             </div>
@@ -240,8 +202,8 @@ class Profile extends Component {
                             <div class="row" style={{ marginBottom: '20px' }}>
                                 <Card>
                                     <CardContent>
-                                        <h4 style={{ fontFamily: "Arial", fontWeight: "700", fontSize: '18px' }}>Education</h4><br />
-                                        {studentview.education.length ? studentview.education.map((edudata, index) => {
+                                        <h4 style={{ fontFamily: "Arial", fontWeight: "700", fontSize: '18px' }}>Education</h4>
+                                        {studentview.education ? studentview.education.map((edudata, index) => {
                                             if (edudata._id !== this.state.b_id) {
                                                 return (
                                                     <div class="row" style={{ paddingLeft: '30px' }}>
@@ -263,7 +225,7 @@ class Profile extends Component {
                                 <Card>
                                     <CardContent>
                                         <h4 style={{ fontFamily: "Arial", fontWeight: "700", fontSize: '18px' }}>Experience</h4>
-                                        {studentview.experience.length ? studentview.experience.map((expdata, index) => {
+                                        {studentview.experience ? studentview.experience.map((expdata, index) => {
                                             if (expdata._id !== this.state.exp_id) {
                                                 return (
                                                     <div class="row" style={{ paddingLeft: '30px' }}>
@@ -286,22 +248,4 @@ class Profile extends Component {
         )
     }
 }
-
-const mapStateToProps = state => {
-    console.log(state)
-    return {
-        profiledata        : state.studentview,
-        redirectToMessages : state.redirectToMessages
-    };
-};
-
-function mapDispatchToProps(dispatch) {
-    return {
-        viewStudent : payload => dispatch(viewStudent(payload)),
-        sendMessages : payload => dispatch(sendMessages(payload))
-    };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(Profile);
-
-// export default Profile;
+export default withApollo(Profile)

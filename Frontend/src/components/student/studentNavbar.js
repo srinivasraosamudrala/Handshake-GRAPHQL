@@ -10,13 +10,7 @@ class StudentNav extends Component {
         this.state = {
             activenav : "jobsearch"
         }
-        // this.handleLogout = this.handleLogout.bind(this);
-        // this.changeActivenav = this.changeActivenav.bind(this);
     }
-    //handle logout to destroy the cookie
-    // handleLogout = () => {
-    //     cookie.remove('studentcookie',{ path:'/' })
-    // }
     changeActivenav = (e) => {
         this.setState({
             activenav : e.target.value
@@ -24,12 +18,9 @@ class StudentNav extends Component {
         console.log(this.state)
     }
     render(){
-        //if Cookie is set render Logout Button
         let navHeader = null;
         let navUpdate = null;
-        let redirect = null;
-        // if(cookie.load('studentcookie')){
-        if (localStorage.getItem('studentId')){
+        if (sessionStorage.getItem('studentId')){
             if(this.props.comp === "jobapplications")
             {
                 navUpdate = (
@@ -91,7 +82,6 @@ class StudentNav extends Component {
         
         return(
             <div>
-                {/* {redirectVar} */}
                 <nav class="navbar navbar-inverse" style={{position:"relative",top:'-20px',borderRadius:'0px',backgroundColor:'#0F1035'}}>
                     <div class="container-fluid">
                         {navHeader}

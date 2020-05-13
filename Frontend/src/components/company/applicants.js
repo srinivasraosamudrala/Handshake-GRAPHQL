@@ -6,8 +6,9 @@ import { Redirect } from 'react-router';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, Dialog, DialogContent,Avatar } from '@material-ui/core';
 import emptyPic from '../../images/empty-profile-picture.png';
-import { connect } from "react-redux";
-import { getJobApplicants } from "../../redux/actions/index";
+import { withApollo, graphql, compose } from 'react-apollo';
+import { listApplicants } from '../../queries/queries';
+import { changeJobStatus } from '../../mutations/mutations'
 
 //Define a Login Component
 class ViewApplicants extends Component {
@@ -34,36 +35,63 @@ class ViewApplicants extends Component {
         }
         this.viewProfile = this.viewProfile.bind(this);
         this.tojobs = this.tojobs.bind(this);
-        this.previewResume = this.previewResume.bind(this); 
-        // this.switchStatus = this.switchStatus.bind(this);
     }
-    //submit Login handler to send a request to the node backend
 
-    updateStatus = (jobId,applicationId,studentId) => {
+    updateStatus = async (jobId,applicationId,studentId) => {
         let data ={
             'jobId':jobId,
             'applicationId':applicationId,
             update:{
             'applications.$.status':this.state.showStatus}
         }
-        console.log(data)
-        axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        axios.put(environment.baseUrl+'/company/updateStudentstatus', data)
-            .then(response => {
-                console.log(response)
-                if (response.data.result){
-                    console.log(response.data.result)
-                    this.setState({
-                        statusUpdated:true
-                    })
-                    this.fetchApplicants()
-                }
-                else if (response.data.error) {
-                    console.log(response.data.error)
-                    this.setState({
-                        statusUpdated:false
-                    })
-            }})
+        // console.log(data)
+        // axios.defaults.headers.common['authorization'] = sessionStorage.getItem('token');
+        // axios.put(environment.baseUrl+'/company/updateStudentstatus', data)
+        //     .then(response => {
+        //         console.log(response)
+        //         if (response.data.result){
+        //             console.log(response.data.result)
+        //             this.setState({
+        //                 statusUpdated:true
+        //             })
+        //             this.fetchApplicants()
+        //         }
+        //         else if (response.data.error) {
+        //             console.log(response.data.error)
+        //             this.setState({
+        //                 statusUpdated:false
+        //             })
+        //     }})
+        let res = await this.props.client.mutate({
+            mutation: changeJobStatus,
+            variables: {
+                studentId: studentId,
+                jobId: jobId,
+                status: this.state.showStatus
+            },
+            refetchQueries: [{
+                query: listApplicants,
+                variables: { jobId: sessionStorage.getItem("JobId") },
+                fetchPolicy: 'no-cache'
+            }]
+        })
+
+        console.log(res)
+
+        let response = res.data.changeJobStatus
+
+        if (response.status === "200") {
+            if (response.status === "200") {
+                this.setState(currentState => ({
+                    statusUpdated:true
+                }));
+            }
+            else {
+                this.setState(currentState => ({
+                    statusUpdated:false
+                }));
+            }
+        }
     }
   
     viewProfile = (e) => {
@@ -74,7 +102,7 @@ class ViewApplicants extends Component {
             view_profile: true,
             studId:e
         })
-        localStorage.setItem('sstudentId',e)
+        sessionStorage.setItem('sstudentId',e)
     }
 
     inputChangeHandler = (e) => {
@@ -85,45 +113,12 @@ class ViewApplicants extends Component {
         console.log(this.state)
     }
 
-    componentDidMount() {
-        this.fetchApplicants()
-    }
-
-    fetchApplicants(){
-        let companyId = localStorage.getItem('companyId')
-        const data = {
-            company_id: companyId,
-            job_id:this.state.job_id
-        }
-        console.log(data)
-        this.props.getJobApplicants(data)
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.post(environment.baseUrl+'/company/listApplicants', data)
-        //     .then(response => {
-        //         console.log("in frontend after response");
-        //         console.log(response.data.result)
-        //         if (response.data.result) {
-        //             this.setState({
-        //                 dataRetrieved: true,
-        //                 stuData: response.data.result
-        //             });
-        //           console.log(this.state.stuData)
-        //         } else if (response.data.error) {
-        //             console.log("response" + response.data.error)
-        //         }
-        //     })
-    }
+    componentDidMount() {}
 
     tojobs = (e) =>{
         this.setState({
             toJobs:true
         })
-    }
-
-    previewResume = (e) =>{
-        this.setState(currentState =>({
-            previewresume : !currentState.previewresume
-        }))
     }
 
     render() {
@@ -151,7 +146,7 @@ class ViewApplicants extends Component {
             renderRedirect = <Redirect to= "/company/home"/>
         }
         
-        let stuData = this.props.stuData;
+        let stuData = this.props.data.listApplicants;
         console.log(stuData)
         return (
             <div>
@@ -166,20 +161,20 @@ class ViewApplicants extends Component {
                                 {renderRedirect}
                             </div>
                                 <div>
-                                    {stuData.length?stuData[0].applications.map((data, index) => {
+                                    {stuData?stuData[0].applications.map((data, index) => {
                                         return (
                                             <div style={{margin:"10px 0px 10px 100px",width:"80%"}}>
                                             <Card>
                                                 <CardContent>
-                                                <div key={data.stud_id} style={{padding:'10px 0px 10px 50px'}}>
+                                                <div key={data.studentId} style={{padding:'10px 0px 10px 50px'}}>
                                                 <div className="row App-align">
                                                 <div className="col-md-1">
-                                                    <img src={stuData[0].studentDetails[index].image?stuData[0].studentDetails[index].image:this.state.emptyprofilepic} height='70' width='70' style={{ position:'relative',top:'20px',left:'-30px'}} alt='Profile'/>
+                                                    <img src={this.state.emptyprofilepic} height='70' width='70' style={{ position:'relative',top:'20px',left:'-30px'}} alt='Profile'/>
                                                 </div>
-                                                <div className="col-md-8" style={{ fontSize: "23px", color: "#1569E0",marginLeft:"-10px" }}><Link onClick = {()=>(this.viewProfile(stuData[0].studentDetails[index]._id))}>{stuData[0].studentDetails[index].first_name+ " " +stuData[0].studentDetails[index].last_name}</Link>
-                                                <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-envelope" style={{ color: "#1569E0" }}></span> {stuData[0].studentDetails[index].email}</div>    
-                                                <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-book" style={{ color: "#1569E0" }}></span> {stuData[0].studentDetails[index].college}</div>
-                                                <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-calendar" style={{ color: "#1569E0" }}></span> Applied on {data.applied_date}</div>
+                                                <div className="col-md-8" style={{ fontSize: "23px", color: "#1569E0",marginLeft:"-10px" }}><Link onClick = {()=>(this.viewProfile(stuData[0].listApplicants[index]._id))}>{stuData[0].listApplicants[index].first_name+ " " +stuData[0].listApplicants[index].last_name}</Link>
+                                                <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-envelope" style={{ color: "#1569E0" }}></span> {stuData[0].listApplicants[index].email}</div>    
+                                                <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-book" style={{ color: "#1569E0" }}></span> {stuData[0].listApplicants[index].college}</div>
+                                                <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-calendar" style={{ color: "#1569E0" }}></span> Applied on {data.appliedDate.substring(0,10)}</div>
                                                 <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-time" style={{ color: "#1569E0" }}></span> Status:{data.status}</div></div>
                                                 <div className="col-md-3">
                                                 <div style={{marginLeft:'15px',marginBottom:'10px', border:'2px'}}>
@@ -189,8 +184,9 @@ class ViewApplicants extends Component {
                                                         <option value="Reviewed" >Reviewed</option>
                                                         <option value="Declined" >Declined</option>
                                                     </select></div>
-                                                    <button class="btn btn-primary" style={{backgroundColor:'#1569E0', marginLeft:'15px', borderRadius:'15px'}} onClick={()=>(this.updateStatus(stuData[0]._id,data._id,stuData[0].studentDetails[index]._id))}>Update Status</button>
-                                                    <button class="btn btn-primary" style={{backgroundColor:'#808080', marginTop:'20px', marginLeft:'15px', borderRadius:'15px', width :'113px',border:'0px'}} onClick={()=>this.previewResume()}><span class="glyphicon glyphicon-paperclip" style={{ color: "white" }}></span>   Resume</button></div>
+                                                    <button class="btn btn-primary" style={{backgroundColor:'#1569E0', marginLeft:'15px', borderRadius:'15px'}} onClick={()=>(this.updateStatus(stuData[0]._id,data._id,stuData[0].listApplicants[index]._id))}>Update Status</button>
+                                                    {/* <button class="btn btn-primary" style={{backgroundColor:'#808080', marginTop:'20px', marginLeft:'15px', borderRadius:'15px', width :'113px',border:'0px'}} onClick={()=>this.previewResume()}><span class="glyphicon glyphicon-paperclip" style={{ color: "white" }}></span>   Resume</button> */}
+                                                    </div>
                                                     <Dialog
                                                         aria-labelledby="simple-modal-title"
                                                         aria-describedby="simple-modal-description" 
@@ -229,18 +225,10 @@ class ViewApplicants extends Component {
         )
     }
 }
-const mapStateToProps = state => {
-    console.log(state)
-    return {
-        stuData : state.jobapplicants,
-    };
-};
 
-function mapDispatchToProps(dispatch) {
-    return {
-        getJobApplicants : payload => dispatch(getJobApplicants(payload)),
-    };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(ViewApplicants);
-// export default ViewApplicants;
+export default compose(withApollo,
+    graphql(listApplicants, {
+   options: {
+       variables: {  jobId: sessionStorage.getItem('JobId') }
+   }
+}),)(ViewApplicants)

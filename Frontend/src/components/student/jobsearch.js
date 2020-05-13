@@ -9,8 +9,9 @@ import emptyPic from '../../images/empty-profile-picture.png';
 import { environment } from '../../Utils/constants'
 import DropdownButton from 'react-bootstrap/DropdownButton'
 import { Dropdown } from 'react-bootstrap'
-import { connect } from "react-redux";
-import { getStudentJobs, applyJobs } from "../../redux/actions/index";
+import { withApollo,graphql, compose } from 'react-apollo';
+import { applyJob } from '../../mutations/mutations'
+import { alljobs } from '../../queries/queries';
 
 
 
@@ -71,7 +72,7 @@ class JobSearch extends Component {
     }
 
     showJob = (e,companyId) => {
-        localStorage.setItem('currcompanyId',companyId)
+        sessionStorage.setItem('currcompanyId',companyId)
         this.setState({
             jobindex: e
         })
@@ -96,42 +97,38 @@ class JobSearch extends Component {
     }
 
     applyJob = async (jobId, companyId) => {
-        let appiledJob = []
-        let fdata = new FormData();
-        fdata.append('jobId', jobId);
-        fdata.append('companyId', companyId)
-        fdata.append('studentId', localStorage.getItem('studentId'));
-        fdata.append('status', "Pending");
-        fdata.append('appliedDate', new Date().toISOString().slice(0, 10));
-        fdata.append('file', this.state.resume);
+        console.log(jobId)
+        let res = await this.props.client.mutate({
+            mutation: applyJob,
+            variables: {
+                job_id: jobId,
+                stud_id: sessionStorage.getItem('studentId'),
+                app_date: new Date()
+            },
+            refetchQueries: [{
+                query: alljobs,
+                variables: {},
+                fetchPolicy: 'no-cache'
+            }]
+        })
 
-        const config = {
-            headers: {
-                'content-type': 'multipart/form-data'
+        console.log(res)
+
+        let response = res.data.applyJob
+
+        if (response.status === "200") {
+            if (response.status === "200") {
+                this.setState(currentState => ({
+                    success: true,
+                    updateprofile: !currentState.updateprofile
+                }));
             }
-        };
-
-        let data = {
-            'jobId': jobId,
-            'companyId': companyId,
-            'studentId': Number(localStorage.getItem('studentId')),
-            'appliedDate': new Date().toISOString().slice(0, 11),
-            'resume': this.state.resume
+            else {
+                this.setState(currentState => ({
+                    updateprofile: !currentState.updateprofile
+                }));
+            }
         }
-        await console.log(fdata)
-        const rest = await this.props.applyJobs(fdata,config)
-        await this.uploadResume(0, 0)
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // const rest = await axios.post(environment.baseUrl + '/student/applyjob', fdata, config)
-        //     .then((response) => {
-        //         console.log(response.data)
-        //         appiledJob = this.state.appiledJob
-        //         this.uploadResume(0, 0)
-        //         this.getJoblist()
-        //         this.setState({
-        //             appliedjob: appiledJob.push(jobId)
-        //         })
-        //     })
     }
 
     uploadResume = (companyId, jobId) => {
@@ -147,22 +144,11 @@ class JobSearch extends Component {
 
 
     componentDidMount() {
-        this.getJoblist()
+        this.setState({
+            studentId:sessionStorage.getItem('studentId')
+        })
     }
 
-    getJoblist() {
-        this.setState({ studentId: localStorage.getItem('studentId') })
-        this.props.getStudentJobs()
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.get(environment.baseUrl + '/student/jobsearch/' + localStorage.getItem('studentId'))
-        //     .then((response) => {
-        //         if (response.data.length > 0) {
-        //             this.setState({
-        //                 joblist: response.data
-        //             })
-        //         }
-        //     })
-    }
 
     sortbyloc() {
         let joblist = this.props.joblist
@@ -187,7 +173,7 @@ class JobSearch extends Component {
     }
 
     sortbyPostingDate() {
-        let joblist = this.props.joblist
+        let joblist = this.props.data.alljobs
 
         let compare = (a,b) =>{
             let comparison = 0
@@ -208,7 +194,7 @@ class JobSearch extends Component {
     }
 
     sortbyPostingDatedesc() {
-        let joblist = this.props.joblist
+        let joblist = this.props.data.alljobs
 
         let compare = (a,b) =>{
             let comparison = 0
@@ -229,7 +215,7 @@ class JobSearch extends Component {
     }
 
     sortbyDeadline() {
-        let joblist = this.props.joblist
+        let joblist = this.props.data.alljobs
 
         let compare = (a,b) =>{
             let comparison = 0
@@ -250,8 +236,7 @@ class JobSearch extends Component {
     }
 
     sortbyDeadlinedesc() {
-        console.log("sortbyDeadlinedesc")
-        let joblist = this.props.joblist
+        let joblist = this.props.data.alljobs
 
         let compare = (a,b) =>{
             let comparison = 0
@@ -281,14 +266,16 @@ class JobSearch extends Component {
         let jobapplybutton = null;
         let sortfilter = null;
 
-        if (this.props.joblist) {
-            console.log(this.props.joblist)
-            let joblist = this.props.joblist
+        console.log(this.props.data)
+
+        if (this.props.data.alljobs) {
+            // console.log(this.props.joblist)
+            let joblist = this.props.data.alljobs
             jobfilter = this.state.jobfilter
 
             if (namesearch.length > 0) {
                 joblist = joblist.filter((job) => {
-                    return (job.title.indexOf(namesearch) > -1 || job.Company[0].name.indexOf(namesearch) > -1)
+                    return (job.title.indexOf(namesearch) > -1 || job.companydetails[0].name.indexOf(namesearch) > -1)
                 })
             }
 
@@ -331,11 +318,11 @@ class JobSearch extends Component {
                             {joblist.slice(this.state.page * this.state.rowsPerPage, this.state.page * this.state.rowsPerPage + this.state.rowsPerPage).map((job, index) => {
                                 //{joblist.map((job, index) => {
                                 return (<div >
-                                    <Link onClick={() => this.showJob(((this.state.page*this.state.rowsPerPage)+index),job.Company[0]._id)} style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
-                                        <div class="col-md-2" style={{ marginTop: '10px', position:'relative', left:'10px' }}><Avatar src={job.Company[0].image ? job.Company[0].image : this.state.emptyprofilepic} style={{ height: '50px', width: '50px', borderRadius: '0px', position: 'relative', left: '-20px' }} >DP</Avatar></div>
+                                    <Link onClick={() => this.showJob(((this.state.page*this.state.rowsPerPage)+index),job.companydetails[0]._id)} style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
+                                        <div class="col-md-2" style={{ marginTop: '10px', position:'relative', left:'10px' }}><Avatar src={ this.state.emptyprofilepic} style={{ height: '50px', width: '50px', borderRadius: '0px', position: 'relative', left: '-20px' }} >DP</Avatar></div>
                                         <div class="col-md-10" style={{ marginBottom: '16px' }}>
                                             <p style={{ fontSize: '16px', fontWeight: '700' }}>{job.title}</p>
-                                            <p style={{ fontSize: '16px', fontWeight: '400' }}>{job.Company[0].name}-{job.location}</p>
+                                            <p style={{ fontSize: '16px', fontWeight: '400' }}>{job.companydetails[0].name}-{job.location}</p>
                                             <p style={{ fontSize: '14px', fontWeight: '400' }}>{job.category}</p></div>
                                         <hr style={{ width: '100%' }}></hr>
                                     </Link>
@@ -355,20 +342,23 @@ class JobSearch extends Component {
                     </div>
                 )
                 jobdetailed = joblist[this.state.jobindex]
+                console.log(jobdetailed)
+                console.log(this.state.studentId)
                 if (jobdetailed.applications) {
-                    applications = jobdetailed.applications.find(app => app.student_id === this.state.studentId)
+                    
+                    applications = jobdetailed.applications.find(app => app.studentId === this.state.studentId)
                 }
                 console.log(applications)
                 if (applications) {
                     jobapplybutton = <div style={{ fontSize: '16px', fontWeight: '500', color: 'rgba(0,0,0,.8)', position: 'relative', top: '-12px', border: '0px' }}>Applied</div>
                 } else {
-                    jobapplybutton = <div><button class="btn btn-primary" style={{ backgroundColor: '#0d7f02', position: 'relative', top: '-18px', border: '0px' }} onClick={() => this.uploadResume(jobdetailed.company_id, jobdetailed._id)}>Quick Apply</button></div>
+                    jobapplybutton = <div><button class="btn btn-primary" style={{ backgroundColor: '#0d7f02', position: 'relative', top: '-18px', border: '0px' }} onClick={() => this.applyJob( jobdetailed._id, jobdetailed.company_id )}>Quick Apply</button></div>
                 }
                 detailedjob = (
                     <div>
-                        <div style={{ float: "left", position: 'relative', left: '10px', top: '-20px' }}><img src={jobdetailed.Company[0].image ? jobdetailed.Company[0].image : this.state.emptyprofilepic} height='70px' width='70px' style={{ position: 'relative', top: '20px', left: '-30px' }} alt='Profile' /></div>
+                        <div style={{ float: "left", position: 'relative', left: '10px', top: '-20px' }}><img src={jobdetailed.companydetails[0].image ? jobdetailed.companydetails[0].image : this.state.emptyprofilepic} height='70px' width='70px' style={{ position: 'relative', top: '20px', left: '-30px' }} alt='Profile' /></div>
                         <div><p style={{ fontSize: '24px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.8)' }}>{jobdetailed.title}</p>
-                            <Link to = {'/company/viewprofile'}><p style={{ fontSize: '18px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.8)' }}>{jobdetailed.Company[0].name}</p></Link>
+                            <Link to = {'/company/viewprofile'}><p style={{ fontSize: '18px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.8)' }}>{jobdetailed.companydetails[0].name}</p></Link>
                             <div class="row" style={{ position: 'relative', left: '85px' }}>
                                 <div class="col-md-3" style={{ padding: "0px" }}>
                                     <div style={{ fontSize: "13px" }}><span class="glyphicon glyphicon-map-marker" style={{ color: "#1569E0" }}></span> {jobdetailed.location}</div>
@@ -405,7 +395,7 @@ class JobSearch extends Component {
                         </div>
                         <div >
                             <h2 style={{ fontSize: '27px', fontWeight: 'bold', textDecoration: 'underline', color: 'rgba(0, 0, 0, 0.8)' }}>{jobdetailed.title}</h2>
-                            <p style={{ lineHeight: '20px', fontSize: '16px' }}>{jobdetailed.job_description}</p>
+                            <p style={{ lineHeight: '20px', fontSize: '16px' }}>{jobdetailed.description}</p>
                         </div>
                     </div>
                 )
@@ -454,20 +444,9 @@ class JobSearch extends Component {
 
 }
 
-const mapStateToProps = state => {
-    console.log(state)
-    return {
-        joblist : state.studentjobs,
-    };
-};
-
-function mapDispatchToProps(dispatch) {
-    return {
-        getStudentJobs : payload => dispatch(getStudentJobs(payload)),
-        applyJobs : (payload,config) => dispatch(applyJobs(payload,config)),
-    };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(JobSearch);
-
-// export default JobSearch;
+export default compose(withApollo,
+    graphql(alljobs, {
+   options: {
+       variables: { }
+   }
+}),)(JobSearch)

@@ -1,94 +1,66 @@
 import React, { Component } from 'react';
 import '../../App.css';
-import axios from 'axios';
-import cookie from 'react-cookies';
 import { Redirect } from 'react-router';
 import { Link } from 'react-router-dom';
-import {environment} from '../../Utils/constants'
-const jwt_decode = require('jwt-decode');
+import { withApollo } from 'react-apollo';
+import { companyLogin } from '../../mutations/mutations';
 
-//Define a Login Component
 class Login extends Component {
-    //call the constructor method
     constructor(props) {
-        //Call the constrictor of Super class i.e The Component
         super(props);
-        //maintain the state required for this component
         this.state = {
             companyid: 0,
             email: "",
             password: "",
             authFlag: false,
             authError: false,
-            token:""
+            token: ""
         }
-        //Bind the handlers to this class
         this.inputChangeHandler = this.inputChangeHandler.bind(this);
         this.submitLogin = this.submitLogin.bind(this);
     }
-    //Call the Will Mount to set the auth Flag to false
     componentWillMount() {
         this.setState({
             authFlag: false
         })
     }
-    //username change handler to update state variable with the text entered by the user
     inputChangeHandler = (e) => {
         const value = e.target.value
         this.setState({
             [e.target.name]: value
         })
     }
-
-    //submit Login handler to send a request to the node backend
-    submitLogin = (e) => {
-        //var headers = new Headers();
-        //prevent page from refresh
+    submitLogin = async (e) => {
         e.preventDefault();
-        const data = {
-            signup: false,
-            email: this.state.email,
-            password: this.state.password
-        }
-        console.log(data)
-        //set the with credentials to true
-        axios.defaults.withCredentials = true;
-        //make a post request with the user data
-        axios.post(environment.baseUrl+'/company/signup', data)
-            .then(response => {
-                console.log(response)
-                if (!response.data.error) {
-                    localStorage.setItem('companyId', response.data._id);
-                    this.setState({
-                        authFlag: true,
-                        authError: false,
-                        // companyid: response.data._id,
-                        token : response.data.result
-                    })
-            }else {
-                    console.log(response.data.error)
-                    this.setState({
-                        authFlag: false,
-                        authError: true
-                    })
-                }
+        let res = await this.props.client.mutate({
+            mutation: companyLogin,
+            variables: {
+                email: this.state.email,
+                password: this.state.password
+            }
+        })
+
+        console.log(res)
+        let response = res.data.companyLogin;
+        console.log(response)
+        if (response._id) {
+            sessionStorage.setItem('companyId', response._id);
+            this.setState({
+                authFlag: true,
+                authError: false
             })
+        } else {
+            this.setState({
+                authFlag: false,
+                authError: true
+            })
+        }
     }
 
     render() {
-        //redirect based on successful login
         let redirectVar = null;
         let invalid = null;
-        if (this.state.token.length > 0) {
-            localStorage.setItem("token", this.state.token);
-            console.log(this.state.token)
-            var decoded = jwt_decode(this.state.token.split(' ')[1]);
-            console.log(decoded)
-            localStorage.setItem("companyId", decoded._id);
-            console.log(localStorage.getItem("companyId"));
-    } 
-        // if (cookie.load('companycookie')) {
-        if (localStorage.getItem('companyId')){
+        if (sessionStorage.getItem('companyId')) {
             console.log("route to home")
             redirectVar = <Redirect to='/company/home' />
         }
@@ -125,5 +97,5 @@ class Login extends Component {
         )
     }
 }
-//export Login Component
-export default Login;
+
+export default withApollo(Login)

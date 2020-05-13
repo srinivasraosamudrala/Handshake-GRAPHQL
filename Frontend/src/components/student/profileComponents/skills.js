@@ -41,13 +41,13 @@ class Skillset extends Component {
         tempskillSet.splice(e, 1);
         skillstr = tempskillSet.toString();
         data = {
-            studentId: localStorage.getItem('studentId'),
+            studentId: sessionStorage.getItem('studentId'),
             update: { skills: skillstr }
         };
         this.props.updateSkill(data)
         //set the with credentials to true
         // axios.defaults.withCredentials = true;
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
+        // axios.defaults.headers.common['authorization'] = sessionStorage.getItem('token');
         // //make a post request with the user data
         // axios.post(environment.baseUrl + '/student/profile', data)
         //     .then(response => {
@@ -80,14 +80,14 @@ class Skillset extends Component {
             let skillstr = tempskillSet;
 
             data = {
-                studentId: localStorage.getItem('studentId'),
+                studentId: sessionStorage.getItem('studentId'),
                 update: { skills: skillstr }
             };
             this.props.updateSkill(data)
 
             // //set the with credentials to true
             //     axios.defaults.withCredentials = true;
-            //     axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
+            //     axios.defaults.headers.common['authorization'] = sessionStorage.getItem('token');
             // //make a post request with the user data
             //     axios.post(environment.baseUrl+'/student/profile', data)
             //     .then(response => {

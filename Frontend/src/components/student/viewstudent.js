@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import { Redirect } from 'react-router';
 import '../../App.css';
-import axios from 'axios';
 import { Card, Chip, CardContent, Typography, Avatar, Dialog, DialogContent } from '@material-ui/core';
 import { environment } from '../../Utils/constants'
 import CakeIcon from '@material-ui/icons/Cake';
@@ -10,8 +9,6 @@ import EmailOutlinedIcon from '@material-ui/icons/EmailOutlined';
 import LocationCityIcon from '@material-ui/icons/LocationCity';
 import SchoolRoundedIcon from '@material-ui/icons/SchoolRounded';
 import WorkIcon from '@material-ui/icons/Work';
-import { connect } from "react-redux";
-import { viewStudent, sendMessages } from "../../redux/actions/index";
 
 
 //Define a Login Component
@@ -19,8 +16,8 @@ class Profile extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            studentId: localStorage.getItem('studentId'),
-            currentstudentId: localStorage.getItem('sstudentId'),
+            studentId: sessionStorage.getItem('studentId'),
+            currentstudentId: sessionStorage.getItem('sstudentId'),
             messagestudent: false,
             mess: "",
             redirectToMessages: false
@@ -36,20 +33,6 @@ class Profile extends Component {
 
     readstudentdata() {
         this.props.viewStudent()
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        // axios.get(environment.baseUrl + '/student/profile/' + localStorage.getItem('sstudentId'))
-        //     .then((response) => {
-        //         //update the state with the response data
-        //         if (response.data) {
-        //             console.log(response.data)
-        //             const data = response.data
-        //             this.setState({
-        //                 profiledata: data[0],
-        //             })
-
-        //             console.log(this.props.profiledata)
-        //         }
-        //     });
     }
 
     messageStudent = () => {
@@ -94,7 +77,7 @@ class Profile extends Component {
         }
         console.log(data)
         this.props.sendMessages(data)
-        // axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
+        // axios.defaults.headers.common['authorization'] = sessionStorage.getItem('token');
         // axios.post(environment.baseUrl + '/message/sendmessage', data)
         //     .then(response => {
         //         console.log("in frontend after response");
@@ -286,21 +269,4 @@ class Profile extends Component {
     }
 }
 
-const mapStateToProps = state => {
-    console.log(state)
-    return {
-        profiledata        : state.studentview,
-        redirectToMessages : state.redirectToMessages
-    };
-};
-
-function mapDispatchToProps(dispatch) {
-    return {
-        viewStudent : payload => dispatch(viewStudent(payload)),
-        sendMessages : payload => dispatch(sendMessages(payload))
-    };
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(Profile);
-
-// export default Profile;
+export default Profile;

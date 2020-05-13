@@ -1,123 +1,111 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import '../../App.css';
 import axios from 'axios';
 import cookie from 'react-cookies';
-import {Redirect} from 'react-router';
-import {environment} from '../../Utils/constants';
+import { Redirect } from 'react-router';
+import { environment } from '../../Utils/constants';
+import { graphql, compose, withApollo } from 'react-apollo';
+import { addCompany } from '../../mutations/mutations';
 
-//Define a Signup Component
-class Signup extends Component{
-    //call the constructor method
-    constructor(props){
-        //Call the constructor of Super class i.e The Component
+class Signup extends Component {
+    constructor(props) {
         super(props);
-        //maintain the state required for this component
         this.state = {
-            name : "",
-            email : "",
-            password : "",
-            location : "",
-            authFlag : false,
-            authError : false
+            name: "",
+            email: "",
+            password: "",
+            location: "",
+            authFlag: false,
+            authError: false
         }
-        //Bind the handlers to this class
         this.inputChangeHandler = this.inputChangeHandler.bind(this);
         this.submitSignup = this.submitSignup.bind(this);
     }
-    //Call the Will Mount to set the auth Flag to false
-    componentWillMount(){
+
+    componentWillMount() {
         this.setState({
-            authFlag : false
+            authFlag: false
         })
     }
-    //input change handler to update state variable with the text entered by the user
+
     inputChangeHandler = (e) => {
         let value = e.target.value
         this.setState({
-            [e.target.name] : value
+            [e.target.name]: value
         })
-        console.log(this.state)
     }
 
-    //submit Signup handler to send a request to the node backend
-    submitSignup = (e) => {
-        var headers = new Headers();
-        //prevent page from refresh
+    submitSignup = async (e) => {
         e.preventDefault();
-        const data = {
-            signup : true,
-            name : this.state.name,
-            email : this.state.email,
-            password : this.state.password,
-            location : this.state.location
-        }
-        //set the with credentials to true
-        axios.defaults.withCredentials = true;
-        //make a post request with the user data
-        console.log(environment.baseUrl+'/company/signup')
-        axios.post(environment.baseUrl+'/company/signup',data)
-            .then(response => {
-                console.log(response)
-                if(response.data === ""){
-                    this.setState({
-                        authFlag : true,
-                        authError : false
-                    })
-                }else{
-                    this.setState({
-                        authFlag : false,
-                        authError : true
-                    })
-                }
-                console.log(this.state)
-            })
+        let res = await this.props.client.mutate({
+            mutation: addCompany,
+            variables: {
+                name: this.state.name,
+                email: this.state.email,
+                password: this.state.password,
+                location: this.state.location
             }
+        })
+        console.log(res)
+        let response = res.data.addCompany;
+        console.log(response)
+        if (response._id) {
+            this.setState({
+                authFlag: true,
+                authError: false
+            })
+        } else {
+            this.setState({
+                authFlag: false,
+                authError: true
+            })
+        }
+    }
 
-    render(){
-        //redirect based on successful Signup
+    render() {
         let redirectVar = null;
         let invalid = null;
-        //if(cookie.load('cookie')){
-        if(this.state.authFlag === true){
-            redirectVar = <Redirect to= {{path :"/company/login", state : {email: this.state.email}}}/>
+        if (this.state.authFlag === true) {
+            redirectVar = <Redirect to="/company/login" />
         }
 
-        if(this.state.authError === true){
+        if (this.state.authError === true) {
             invalid = <p>Email Id is Taken</p>
         }
 
-        return(
+        return (
             <div>
                 {redirectVar}
-            <div class="container">
-                
-                <div class="login-form">
-                    <div class="main-div">
-                        <div class="panel">
-                            <title>Handshake</title>
-                            <h1>Sign Up</h1>
-                            <p>Please enter your details</p>
-                        </div>
-                            <div class="form-group">
-                                <input onChange = {this.inputChangeHandler} type="text" class="form-control" name="name" placeholder="Company Name"/>
+                <div class="container">
+
+                    <div class="login-form">
+                        <div class="main-div">
+                            <div class="panel">
+                                <title>Handshake</title>
+                                <h1>Sign Up</h1>
+                                <p>Please enter your details</p>
                             </div>
                             <div class="form-group">
-                                <input onChange = {this.inputChangeHandler} type="text" class="form-control" name="email" placeholder="Email ID"/>
+                                <input onChange={this.inputChangeHandler} type="text" class="form-control" name="name" placeholder="Company Name" />
                             </div>
                             <div class="form-group">
-                                <input onChange = {this.inputChangeHandler} type="password" class="form-control" name="password" placeholder="Password"/>
+                                <input onChange={this.inputChangeHandler} type="text" class="form-control" name="email" placeholder="Email ID" />
                             </div>
                             <div class="form-group">
-                                <input onChange = {this.inputChangeHandler} type="text" class="form-control" name="location" placeholder="Location"/>
+                                <input onChange={this.inputChangeHandler} type="password" class="form-control" name="password" placeholder="Password" />
                             </div>
-                            <button onClick = {this.submitSignup} class="btn btn-primary">Signup</button> 
+                            <div class="form-group">
+                                <input onChange={this.inputChangeHandler} type="text" class="form-control" name="location" placeholder="Location" />
+                            </div>
+                            <button onClick={this.submitSignup} class="btn btn-primary">Signup</button>
                             <div>{invalid}</div>
-                        </div>              
+                        </div>
                     </div>
-                    </div>
-                    </div>
+                </div>
+            </div>
         )
     }
 }
-//export Signup Component
-export default Signup;
+
+// export default Signup;
+export default withApollo(Signup)

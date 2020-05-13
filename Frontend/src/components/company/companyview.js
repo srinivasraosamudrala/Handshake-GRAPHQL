@@ -9,26 +9,31 @@ import { Card, CardContent, Button, IconButton, InputBase, TextField, Avatar } f
 import Icon from '@material-ui/core/Icon';
 import SearchIcon from '@material-ui/icons/Search';
 import Company_Logo from '../../images/Cover_Letter_Social.png'
+import { withApollo } from 'react-apollo';
+import { company } from '../../queries/queries';
 
 class Profile extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            companyId: localStorage.getItem('currcompanyId'),
+            companyId: sessionStorage.getItem('currcompanyId'),
             profile:null
         }
     }
     componentDidMount(){
-        // this.setState({ studentId: localStorage.getItem('studentId') })
-        console.log(localStorage.getItem('currcompanyId'))
-        axios.defaults.headers.common['authorization'] = localStorage.getItem('token');
-        axios.get(environment.baseUrl+'/company/profile/' + localStorage.getItem('currcompanyId'))
-            .then((response) => {
-                this.setState({
-                    profile : response.data.result[0]
-                })
-                console.log(this.state.profile)
-            })
+        // this.setState({ studentId: sessionStorage.getItem('studentId') })
+        this.fetchCompanydetails()
+    }
+
+    async fetchCompanydetails() {
+        const { data } = await this.props.client.query({
+            query: company,
+            variables: { companyId: sessionStorage.getItem("companyId") },
+            fetchPolicy: 'no-cache'
+        })
+        this.setState({
+            profile: data.company,
+        })
     }
     render(){
         let companyEdit = null;
@@ -82,4 +87,4 @@ class Profile extends Component {
     }
 }
 
-export default Profile;
+export default withApollo(Profile)
