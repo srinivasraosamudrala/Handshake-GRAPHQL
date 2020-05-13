@@ -1,31 +1,37 @@
 {
-  "name": "backend",
+  "name": "handshake",
   "version": "1.0.0",
-  "description": "Handshake_Backend",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon ./index.js --exec babel-node -e js"
+    "start": "nodemon ./index.js --exec babel-node -e js",
+    "test": "mocha"
   },
-  "author": "Srinivas_Samudrala",
+  "author": "sreeja sriram",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.638.0",
+    "aws-sdk": "^2.639.0",
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.7.0",
     "babel-preset-stage-0": "^6.24.1",
     "body-parser": "^1.19.0",
+    "chai": "^4.2.0",
+    "chai-http": "^4.3.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "express-graphql": "^0.9.0",
+    "express-session": "^1.17.0",
+    "graphql": "^15.0.0",
     "jsonwebtoken": "^8.5.1",
-    "kafka-node": "^5.0.0",
-    "mongodb": "^3.5.5",
+    "kafka-node": "^3.0.1",
+    "mocha": "^7.1.1",
     "mongoose": "^5.9.5",
-    "mongoose-unique-validator": "^2.0.3",
     "multer": "^1.4.2",
     "mysql": "^2.18.1",
     "nodemon": "^2.0.2",
     "passport": "^0.4.1",
     "passport-jwt": "^4.0.0",
-    "router": "^1.3.4"
+    "password-hash": "^1.2.2",
+    "tedious": "^8.0.1"
   }
 }

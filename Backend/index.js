@@ -1,16 +1,17 @@
 var express = require('express');
-var router = express.Router();
 var path = require('path');
-var bodyParser = require('body-parser');
-const mongoose = require('mongoose');
+var router = express.Router();
+const graphqlHTTP = require('express-graphql');
+const schema = require('./backend/Gqlschema/schema');
+var bodyParser = require('body-parser')
+var session = require('express-session');
 var cors = require('cors');
-var student = require('./Controllers/studentController');
-var company = require('./Controllers/companyController');
-var message = require('./Controllers/messageController');
-var connection = require('./dbConnection');
-
 var port = 3001;
 var app = express();
+const { mongoDB } = require('./backend/Database/config');
+const mongoose = require('mongoose');
+
+
 app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -21,18 +22,37 @@ app.use(function(req, res, next) {
   next();
 });
 
+
 app.use(cors({ origin: true, credentials: true }));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({extended:true}));
+
+
+var options = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  poolSize: 500,
+  bufferMaxEntries: 0
+};
+
+mongoose.connect(mongoDB, options, (err, res) => {
+  if (err) {
+      console.log(err);
+      console.log(`MongoDB Connection Failed`);
+  } else {
+      console.log(`MongoDB Connected`);
+  }
+});
+
+app.use("/graphql",graphqlHTTP({
+  schema,
+  graphiql: true
+}));
 
 
 
-app.use("/student",student)
-app.use("/company",company)
-app.use("/message",message)
-
-app.listen(port,()=>{
-  console.log(`listening to port ${port}`)
-})
-
+app.listen(port);
+console.log("GraphQL Server Listening on port 3001");
 module.exports = app;
+
+
