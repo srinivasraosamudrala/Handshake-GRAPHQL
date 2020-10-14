@@ -1,5 +1,5 @@
 const config = {
-    mongoDB: 'mongodb+srv://handshakeuser:handshake@cluster0-e4iwa.mongodb.net/273lab3',
+    mongoDB: '',
     secret: "cmpe273_secret_key"
 };
 
